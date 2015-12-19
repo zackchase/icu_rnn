@@ -12,8 +12,12 @@ import evaluation
 ###############################
 
 
-f = open("../icu_old/icu_old-resampled_60min.npz")
-g = open("../icu_old/icu_old-labels_all.npz")
+###############################
+#   Edit the path to point to your data
+###############################
+
+f = open("../path/to/data")
+g = open("../path/to/data")
 
 a = np.load(f)
 b = np.load(g)
@@ -24,18 +28,21 @@ Y = b["Yd"].astype("float")
 f.close()
 g.close()
 
-#perms = range(len(X))
-#random.shuffle(perms)
-with open("perms.npy") as f:
-    perms = np.load(f)
+############################
+#   Load indices to train with a particular shuffle of the data.
+#   Useful for reproducibility
+############################
+# with open("perms.npy") as f:
+#     perms = np.load(f)
 
-with open("naiveyhats.npy") as f:
-    Y_guess = np.load(f)
+# X = X[perms].copy()
+# Y = Y[perms].copy()
 
-X = X[perms].copy()
-Y = Y[perms].copy()
 
-train_size=9000
+#
+#   Set up your train/ test (and validation splits)
+#
+train_size=N
 
 X_train = X[0:train_size]
 Y_train = Y[0:train_size]
