@@ -14,6 +14,12 @@ import evaluation
 
 ###############################
 #   Edit the path to point to your data
+#   Tidy up to load your data, however you have it stored.
+#   X should be a list of 2d arrays. First dimension idexes examples.
+#   Second dimension indexes sequences steps.
+#   Third dimension corresponds to the measurements within one sequence step.
+#   The sequences needn't be the same length.
+#   Yd is simply a 2d array of examples by labels. All entries should be binary.
 ###############################
 
 f = open("../path/to/data")
