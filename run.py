@@ -62,14 +62,14 @@ Y_test = Y[train_size:]
 rnn = M2M_RNN(num_input=13, num_hidden=64, num_output=429, clip_at=0.0)
 
 
-def train(X, Y, iters=100, eta=100, alpha=0.0, lambda2=0.0):
+def train(X, Y, iters=100, eta=100, alpha=0.0, lambda2=0.0, dropout=.5):
     running_total = 0
 
     for it in xrange(iters):
         i = random.randint(0, len(X)-1)
 
         if X[i].shape[0] < 200:
-            cost, last_step_cost = rnn.train(X[i], np.tile(Y[i], (len(X[i]), 1)), eta, alpha, lambda2)
+            cost, last_step_cost = rnn.train(X[i], np.tile(Y[i], (len(X[i]), 1)), eta, alpha, lambda2, dropout)
 
         else:
             cost, last_step_cost = rnn.train(X[i][-200:], np.tile(Y[i], (200, 1)), eta, alpha, lambda2)

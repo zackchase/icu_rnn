@@ -16,6 +16,7 @@ class M2M_RNN:
         eta = T.scalar()
         alpha = T.scalar()
         lambda2 = T.scalar()
+        drop_prob = T.scalar()
 
         self.num_input = num_input
         self.num_hidden = num_hidden
@@ -28,7 +29,7 @@ class M2M_RNN:
         prev_layer = inputs
         layers = [ inputs ]
         for i,num_curr in enumerate(num_hidden):
-            lstm = LSTMLayer(num_prev, num_curr, input_layers=[prev_layer], name="lstm{0}".format(i+1))
+            lstm = LSTMLayer(num_prev, num_curr, input_layers=[prev_layer], name="lstm{0}".format(i+1), drop_prob=drop_prob)
             num_prev = num_curr
             prev_layer = lstm
             layers.append(lstm)
@@ -56,9 +57,16 @@ class M2M_RNN:
 
         updates = momentum(cost, params, caches, eta, clip_at=self.clip_at, scale_norm=self.scale_norm, lambda2=lambda2)
 
-        self.train = theano.function([X, Y, eta, alpha, lambda2], [cost, last_step_cost], updates=updates, allow_input_downcast=True)
+        self.train_func = theano.function([X, Y, eta, alpha, lambda2, drop_prob], [cost, last_step_cost], updates=updates, allow_input_downcast=True)
 
-        self.predict=theano.function([X], [Y_hat[-1]], allow_input_downcast=True)
+        self.predict_func=theano.function([X, drop_prob], [Y_hat[-1]], allow_input_downcast=True)
+
+
+    def train(self, X, Y, eta, alpha, lambda2, drop_prob):
+        return self.train_func(X,Y,eta,alpha, lambda2, drop_prob)
+
+    def predict(self):
+        return predict_func(X, 0.0)
 
 
     def reset_state(self):
@@ -80,7 +88,7 @@ class M2M_RNN:
         to_load = cPickle.load(f)
         assert(to_load['num_input'] == self.num_input)
         assert(to_load['num_output'] == self.num_output)
-        
+
         saved_nb_hidden = to_load['num_hidden']
         try:
             len(saved_nb_hidden)
@@ -89,7 +97,7 @@ class M2M_RNN:
         else:
             assert(len(saved_nb_hidden) == len(self.num_hidden))
             assert(np.all([ h1 == h2 for h1,h2 in zip(saved_nb_hidden, self.num_hidden) ]))
-        
+
         if 'clip_at' in to_load:
             assert(to_load['clip_at'] == self.clip_at)
         if 'scale_norm' in to_load:
