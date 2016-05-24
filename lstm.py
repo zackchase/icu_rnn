@@ -9,6 +9,9 @@ class NNLayer:
     def get_params(self):
         return self.params
 
+    def get_param_names(self):
+        return [ 'UNK' if p.name is None else p.name for p in self.params ]
+
     def save_model(self):
         return
 
@@ -93,14 +96,73 @@ class LSTMLayer(NNLayer):
 
         return outputs
 
-
-    # def updates(self):
-    #     return [(self.s0, self.new_s), (self.h0, self.new_h)]
-
     def reset_state(self):
         self.h0 = theano.shared(floatX(np.zeros(self.num_cells)))
         self.s0 = theano.shared(floatX(np.zeros(self.num_cells)))
 
+class GRULayer(NNLayer):
+
+    def __init__(self, num_input, num_cells, input_layers=None, name="", go_backwards=False):
+        """
+        GRU Layer
+        Takes as input sequence of inputs, returns sequence of outputs
+        """
+
+        self.name = name
+        self.num_input = num_input
+        self.num_cells = num_cells
+
+        if len(input_layers) >= 2:
+            self.X = T.concatenate([input_layer.output() for input_layer in input_layers], axis=1)
+        else:
+            self.X = input_layers[0].output()
+
+        self.s0 = zeros(num_cells)
+        self.go_backwards = go_backwards
+
+        self.U_z = random_weights((num_input, num_cells), name=self.name+"U_z")
+        self.W_z = random_weights((num_cells, num_cells), name=self.name+"W_z")
+        self.U_r = random_weights((num_input, num_cells), name=self.name+"U_r")
+        self.W_r = random_weights((num_cells, num_cells), name=self.name+"W_r")
+        self.U_h = random_weights((num_input, num_cells), name=self.name+"U_h")
+        self.W_h = random_weights((num_cells, num_cells), name=self.name+"W_h")
+        self.b_z = zeros(num_cells, name=self.name+"b_z")
+        self.b_r = zeros(num_cells, name=self.name+"b_r")
+        self.b_h = zeros(num_cells, name=self.name+"b_h")
+
+        self.params = [ self.U_z, self.W_z, self.U_r,
+                        self.W_r, self.U_h, self.W_h,
+                        self.b_z, self.b_r, self.b_h
+                    ]
+
+        self.output()
+
+    def one_step(self, x, s_tm1):
+        """
+        """
+        z = T.nnet.sigmoid(T.dot(x, self.U_z) + T.dot(s_tm1, self.W_z) + self.b_z)
+        r = T.nnet.sigmoid(T.dot(x, self.U_r) + T.dot(s_tm1, self.W_r) + self.b_r)
+        h = T.tanh(T.dot(x, self.U_h) + T.dot(s_tm1 * r, self.W_h) + self.b_h)
+        s = (1-z) * h + z * s_tm1
+
+        return [s]
+
+
+    def output(self, train=True):
+
+        outputs_info = [self.s0]
+
+        (outputs, updates) = theano.scan(
+                fn=self.one_step,
+                sequences=self.X,
+                outputs_info = outputs_info,
+                go_backwards = self.go_backwards
+            )
+
+        return outputs
+
+    def reset_state(self):
+        self.s0 = zeros(self.num_cells)
 
 class FullyConnectedLayer(NNLayer):
     """
@@ -174,12 +236,13 @@ class SigmoidLayer(NNLayer):
 
 class DropoutLayer(NNLayer):
 
-    def __init__(self, input_layer, name=""):
+    def __init__(self, input_layer, name="", dropout_probability=0.):
         self.X = input_layer.output()
         self.params = []
+        self.dropout_probability = dropout_probability
 
     def output(self):
-        return dropout(self.X)
+        return dropout(self.X, self.dropout_probability)
 
 
 class MergeLayer(NNLayer):
